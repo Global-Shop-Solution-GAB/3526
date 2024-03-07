@@ -1,0 +1,283 @@
+Program.Sub.ScreenSU.Start
+gui.Form1..create
+gui.Form1..caption("New Contact")
+gui.Form1..size(3045,2565)
+gui.Form1..minx(0)
+gui.Form1..miny(0)
+gui.Form1..position(0,0)
+gui.Form1..event(unload,form1_unload)
+gui.Form1..alwaysontop(False)
+gui.Form1..fontname("Arial")
+gui.Form1..fontsize(8)
+gui.Form1..forecolor(0)
+gui.Form1..fontstyle(,,,,)
+gui.Form1..BackColor(-2147483633)
+gui.Form1..controlbox(True)
+gui.Form1..maxbutton(False)
+gui.Form1..minbutton(False)
+gui.Form1..mousepointer(0)
+gui.Form1..moveable(True)
+gui.Form1..sizeable(False)
+gui.Form1..ShowInTaskBar(True)
+gui.Form1..titlebar(True)
+gui.Form1.lblContact.create(label,"Contact E-mail:",True,1935,255,1,200,200,True,0,Arial,8,-2147483633,0)
+gui.Form1.lblContact.defaultvalue("")
+gui.Form1.lblContact.controlgroup(0)
+gui.Form1.txtContact.create(textbox,"",True,2445,300,0,200,500,True,0,Arial,8,-2147483643,1)
+gui.Form1.txtContact.defaultvalue("")
+gui.Form1.txtContact.controlgroup(0)
+gui.Form1.chk1.create(checkbox)
+gui.Form1.chk1.caption("Turn on E-ACH")
+gui.Form1.chk1.visible(True)
+gui.Form1.chk1.size(1935,255)
+gui.Form1.chk1.zorder(0)
+gui.Form1.chk1.position(200,1010)
+gui.Form1.chk1.enabled(True)
+gui.Form1.chk1.alignment(0)
+gui.Form1.chk1.fontname("Arial")
+gui.Form1.chk1.fontsize(8)
+gui.Form1.chk1.event(click,chk1_click)
+gui.Form1.chk1.defaultvalue("")
+gui.Form1.chk1.controlgroup(0)
+gui.Form1.cmdSave.create(button)
+gui.Form1.cmdSave.caption("Save")
+gui.Form1.cmdSave.visible(True)
+gui.Form1.cmdSave.size(855,375)
+gui.Form1.cmdSave.zorder(0)
+gui.Form1.cmdSave.position(200,1450)
+gui.Form1.cmdSave.enabled(True)
+gui.Form1.cmdSave.fontname("Arial")
+gui.Form1.cmdSave.fontsize(8)
+gui.Form1.cmdSave.event(click,cmdsave_click)
+gui.Form1.cmdSave.defaultvalue("")
+gui.Form1.cmdSave.controlgroup(0)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.svendor.Declare(String)
+V.Local.sfirstname.Declare(String)
+V.Local.slastname.Declare(String)
+v.Local.sname.Declare(string)
+v.Local.semail.Declare(string)
+
+'F.Intrinsic.Control.If(V.Caller.Hook,=,42900)
+F.Intrinsic.Control.If(V.Caller.Hook,=,51000)
+	'Passed.DATA-CRM-CompType = 10 then Set Passed.CRM-cmdDashGAB-2 to "E-ACH"
+	V.Passed.CRM-cmdDashGAB-2.Set("E-ACH")
+' 42919 Script 2 Button If Passed.DATA-CRM-CompType = 10 then If Passed.CRM-txtEmail-1 <> blank Pop up a screen: 1 text box labeled
+F.Intrinsic.Control.ElseIf(V.Caller.Hook,=,51016)
+
+	F.Intrinsic.Control.If(V.Passed.DATA-CRM-Comptype,=,10,"AND",V.Passed.CRM-txtCnctEmail-1,<>,"")
+		'open connection
+	F.ODBC.Connection!con.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+		'set the vendor info
+		V.Local.svendor.Set(V.Passed.DATA-CRM-CompID)
+		v.Local.semail.Set(v.Passed.CRM-txtCnctEmail-1)
+				
+		f.Intrinsic.String.Build("Select NAME_LAST, NAME_FIRST from CONTACT where EMAIL1 = '{0}' and CUST = '{1}' and TYPE = '{2}'",v.local.semail.trim,v.Local.svendor.Trim,"V",v.Local.ssql)
+		F.ODBC.Connection!Con.OpenRecordsetRO("rst",V.Local.ssql)
+		
+		Function.Intrinsic.Control.if(Variable.Odbc.Con!rst.Eof,=,False)
+			v.Local.sfirstname.Set(v.odbc.con!rst.FieldValTrim!NAME_FIRST)
+			v.Local.slastname.Set(V.ODBC.con!rst.FieldValTrim!NAME_LAST)
+		f.Intrinsic.Control.EndIf
+		
+		f.ODBC.con!rst.Close
+
+		'see if that vendor is already stored in the custom table
+		F.Intrinsic.string.Build("Select EMAIL from GCG_3526_EACH_Remit where VENDOR = '{0}' and EMAIL = '{1}'",V.local.svendor.Trim,V.Local.semail.PSQLFriendly,V.Local.ssql)
+		F.ODBC.Connection!Con.OpenRecordsetRO("rst",V.Local.ssql)
+		
+		Function.Intrinsic.Control.if(Variable.Odbc.Con!rst.Eof,=,False)
+		'if there is an email for that vendor populate the textbox with it
+			Gui.Form1.txtContact.Text(v.Passed.CRM-txtCnctEmail-1)
+			Gui.Form1.txtContact.Enabled(False)
+			Gui.Form1.chk1.Value(1)
+		F.Intrinsic.Control.Else
+			Gui.Form1.txtContact.Text(V.Passed.CRM-txtCnctEmail-1)
+			Gui.Form1.txtContact.Enabled(True)
+'				gui.Form1.chk1.Value
+			gui.Form1.chk1.Value(0)
+		F.Intrinsic.Control.EndIf
+		
+		F.ODBC.con!rst.Close
+		'display the form
+		Gui.Form1..Visible(true)
+		
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3526_EACH_Remit.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+F.Intrinsic.Control.SetErrorHandler("Unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'close connection and end the program
+F.ODBC.Connection!con.Close
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3526_EACH_Remit.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+
+Function.Intrinsic.Control.EndIf
+Program.Sub.Unload.End
+
+program.sub.form1_unload.start
+F.Intrinsic.Control.SetErrorHandler("form1_unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'call the unload sub
+F.Intrinsic.Control.Callsub(Unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("form1_unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3526_EACH_Remit.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Unload)
+Function.Intrinsic.Control.EndIf
+
+
+program.sub.form1_unload.End
+
+program.sub.cmdsave_click.start
+F.Intrinsic.Control.SetErrorHandler("cmdsave_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.svendor.Declare(String)
+V.Local.sfirstname.Declare(String)
+V.Local.slastname.Declare(String)
+V.Local.scontactmsg.Declare(String)
+V.Local.sret.Declare(String)
+v.Local.sname.Declare(string)
+v.Local.semail.Declare(String)
+
+'make the screen invisible
+Gui.Form1..Visible(false)
+
+'set the vendor info
+V.Local.svendor.Set(V.Passed.DATA-CRM-CompID)
+
+v.Local.semail.Set(v.Passed.CRM-txtCnctEmail-1)
+
+f.Intrinsic.String.Build("Select NAME_LAST, NAME_FIRST from CONTACT where EMAIL1 = '{0}' and CUST = '{1}' and TYPE = '{2}'",v.local.semail.trim,v.Local.svendor.Trim,"V",v.Local.ssql)
+F.ODBC.Connection!Con.OpenRecordsetRO("rst",V.Local.ssql)
+
+Function.Intrinsic.Control.if(Variable.Odbc.Con!rst.Eof,=,False)
+	v.Local.sfirstname.Set(v.odbc.con!rst.FieldValTrim!NAME_FIRST)
+	v.Local.slastname.Set(V.ODBC.con!rst.FieldValTrim!NAME_LAST)
+f.Intrinsic.Control.EndIf
+
+f.ODBC.con!rst.Close
+
+'check to see if the checkbox was checked
+F.Intrinsic.Control.If(V.Screen.Form1!chk1.Value,=,1)
+	'see if that vendor is already stored in the custom table
+	F.Intrinsic.string.Build("Select * from GCG_3526_EACH_Remit where VENDOR = '{0}' and FIRST_NAME = '{1}' and LAST_NAME = '{2}'",V.local.svendor.Trim,V.local.sfirstname.psqlfriendly,V.local.slastname.psqlfriendly,V.Local.ssql)
+	F.ODBC.Connection!Con.OpenRecordsetRW("rst",V.Local.ssql)
+	
+	Function.Intrinsic.Control.if(Variable.Odbc.Con!rst.Eof,=,False)
+		'if the email is found update it
+		f.ODBC.con!rst.Set!EMAIL(v.Screen.Form1!txtContact.Text)
+		F.ODBC.con!rst.Update
+	'otherwise add new info
+	F.Intrinsic.Control.Else
+		F.ODBC.con!rst.AddNew
+		F.ODBC.con!rst.Set!EMAIL(V.Screen.Form1!txtContact.Text)
+		F.ODBC.con!rst.Set!VENDOR(V.Local.svendor.Trim)
+		F.ODBC.con!rst.Set!FIRST_NAME(V.Local.sfirstname.Trim)
+		F.ODBC.con!rst.Set!LAST_NAME(V.Local.slastname.Trim)
+		F.ODBC.con!rst.Update
+	F.Intrinsic.Control.EndIf
+	
+	F.ODBC.con!rst.Close
+F.Intrinsic.Control.Else
+	F.Intrinsic.String.Build("{0} {1} {2}","Are you sure you want to delete",V.Screen.Form1!txtContact.Text,"from your E-ACH contacts?",V.Local.scontactmsg)
+	'warn the user and ask if they would like to remove the contact
+	Function.Intrinsic.UI.MsgBox(V.Local.scontactmsg,"Warning!",4,Variable.local.sret)
+	
+	'if yes, remove the contact
+	F.Intrinsic.Control.If(V.Local.sret,=,"6")
+		F.Intrinsic.String.Build("Delete from GCG_3526_EACH_Remit where EMAIL = '{0}'",V.Local.semail.Trim,V.Local.ssql)
+		F.ODBC.Connection!con.Execute(V.Local.ssql)
+		Gui.Form1.txtContact.Text("")
+	F.Intrinsic.Control.EndIf
+	
+F.Intrinsic.Control.EndIf
+
+'call the unload sub
+F.Intrinsic.Control.CallSub(Unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdsave_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3526_EACH_Remit.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Unload)
+Function.Intrinsic.Control.EndIf
+program.sub.cmdsave_click.End
+
+program.sub.chk1_click.start
+F.Intrinsic.Control.SetErrorHandler("chk1_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+F.Intrinsic.Control.If(V.Screen.Form1!chk1.Value,=,1)
+	'enable the textbox
+	Gui.Form1.txtContact.Enabled(true)
+'otherwise disable
+F.Intrinsic.Control.Else
+	Gui.Form1.txtContact.Enabled(false)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("chk1_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3526_EACH_Remit.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Unload)
+Function.Intrinsic.Control.EndIf
+program.sub.chk1_click.End
+
+Program.Sub.Comments.Start
+${$0$}$GCG_3526_EACH_Remit$}$WAW$}$7/10/2016$}$False
+${$3$}$0$}$$}$-1$}$-1$}$$}$1/1/1900$}$Original customer was SMS Millcraft.
+
+This is a re-write of the original script due to many inconsistencies with the original.
+Program.Sub.Comments.End
+
